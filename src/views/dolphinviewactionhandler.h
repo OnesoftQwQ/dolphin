@@ -137,8 +137,8 @@ private Q_SLOTS:
     /** Resets the size of the current set view mode to default. */
     void zoomReset();
 
-    /** Switches between a separate sorting and a mixed sorting of files and folders. */
-    void toggleSortFoldersFirst();
+    /** Updates the state of the 'Folders First' actions. */
+    void updateFoldersFirstActions();
 
     /**
      * Updates the state of the 'Sort Ascending/Descending' action.
@@ -149,6 +149,11 @@ private Q_SLOTS:
      * Updates the state of the 'Sort Folders First' action.
      */
     void slotSortFoldersFirstChanged(bool foldersFirst);
+
+    /**
+     * Updates the state of the 'Folders First Within Groups' action.
+     */
+    void slotFoldersFirstWithinGroupsChanged(bool foldersFirstWithinGroups);
 
     /**
      * Switches between showing hidden files last or not.

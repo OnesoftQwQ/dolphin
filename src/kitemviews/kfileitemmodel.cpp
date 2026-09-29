@@ -266,6 +266,7 @@ KFileItemModel::KFileItemModel(QObject *parent)
     : KItemModelBase("text", parent)
     , m_dirLister(nullptr)
     , m_sortDirsFirst(true)
+    , m_sortDirsFirstWithinGroups(true)
     , m_sortHiddenLast(false)
     , m_sortRole(NameRole)
     , m_sortingProgressPercent(-1)
@@ -462,6 +463,19 @@ void KFileItemModel::setSortDirectoriesFirst(bool dirsFirst)
 bool KFileItemModel::sortDirectoriesFirst() const
 {
     return m_sortDirsFirst;
+}
+
+void KFileItemModel::setSortDirectoriesFirstWithinGroups(bool dirsFirstWithinGroups)
+{
+    if (dirsFirstWithinGroups != m_sortDirsFirstWithinGroups) {
+        m_sortDirsFirstWithinGroups = dirsFirstWithinGroups;
+        resortAllItems();
+    }
+}
+
+bool KFileItemModel::sortDirectoriesFirstWithinGroups() const
+{
+    return m_sortDirsFirstWithinGroups;
 }
 
 void KFileItemModel::setSortHiddenLast(bool hiddenLast)
@@ -2351,6 +2365,152 @@ QString KFileItemModel::groupKeyForItem(const ItemData *item, const QByteArray &
     }
 }
 
+QString KFileItemModel::groupIdentityForItem(const ItemData *item, const QByteArray &role) const
+{
+    switch (typeForRole(role)) {
+    case NameRole:
+        return nameGroupValueForName(item->item.text());
+    case SizeRole:
+        return sizeGroupValueForItem(item);
+    case ModificationTimeRole:
+        return timeGroupIdentityForDateTime(item->item.time(KFileItem::ModificationTime));
+    case CreationTimeRole:
+        return timeGroupIdentityForDateTime(item->item.time(KFileItem::CreationTime));
+    case AccessTimeRole:
+        return timeGroupIdentityForDateTime(item->item.time(KFileItem::AccessTime));
+    case DeletionTimeRole:
+        return timeGroupIdentityForDateTime(item->values.value("deletiontime").toDateTime());
+    case RatingRole:
+        return QString::number(item->values.value("rating", 0).toInt());
+    default:
+        return item->values.value(role).toString();
+    }
+}
+
+QString KFileItemModel::nameGroupValueForName(const QString &name) const
+{
+    // Use the first character of the name as group indication
+    QChar firstChar = name.at(0).toUpper();
+    if (firstChar == QLatin1Char('~') && name.length() > 1) {
+        firstChar = name.at(1).toUpper();
+    }
+
+    QString groupValue;
+    if (firstChar.isLetter()) {
+        if (m_collator.compare(firstChar, QChar(QLatin1Char('A'))) >= 0 && m_collator.compare(firstChar, QChar(QLatin1Char('Z'))) <= 0) {
+            // WARNING! Symbols based on latin 'Z' like 'Z' with acute are treated wrong as non Latin and put in a new group.
+
+            // Try to find a matching group in the range 'A' to 'Z'.
+            static std::vector<QChar> lettersAtoZ;
+            lettersAtoZ.reserve('Z' - 'A' + 1);
+            if (lettersAtoZ.empty()) {
+                for (char c = 'A'; c <= 'Z'; ++c) {
+                    lettersAtoZ.push_back(QLatin1Char(c));
+                }
+            }
+
+            auto localeAwareLessThan = [this](QChar c1, QChar c2) -> bool {
+                return m_collator.compare(c1, c2) < 0;
+            };
+
+            std::vector<QChar>::iterator it = std::lower_bound(lettersAtoZ.begin(), lettersAtoZ.end(), firstChar, localeAwareLessThan);
+            if (it != lettersAtoZ.end()) {
+                if (localeAwareLessThan(firstChar, *it)) {
+                    // firstChar belongs to the group preceding *it.
+                    // Example: for an umlaut 'A' in the German locale, *it would be 'B' now.
+                    --it;
+                }
+                groupValue = *it;
+            }
+        } else {
+            // Symbols from non Latin-based scripts
+            groupValue = firstChar;
+        }
+    } else if (firstChar >= QLatin1Char('0') && firstChar <= QLatin1Char('9')) {
+        // Apply group '0 - 9' for any name that starts with a digit
+        groupValue = i18nc("@title:group Groups that start with a digit", "0 - 9");
+    } else {
+        groupValue = i18nc("@title:group", "Others");
+    }
+    return groupValue;
+}
+
+QString KFileItemModel::sizeGroupValueForItem(const ItemData *itemData) const
+{
+    const KFileItem &item = itemData->item;
+    KIO::filesize_t fileSize = !item.isNull() ? item.size() : ~0U;
+    QString newGroupValue;
+    if (!item.isNull() && item.isDir()) {
+        if (ContentDisplaySettings::directorySizeMode() == ContentDisplaySettings::EnumDirectorySizeMode::ContentCount || m_sortDirsFirst) {
+            newGroupValue = i18nc("@title:group Size", "Folders");
+        } else {
+            fileSize = itemData->values.value("size").toULongLong();
+        }
+    }
+
+    if (newGroupValue.isEmpty()) {
+        if (fileSize < 5 * 1024 * 1024) { // < 5 MB
+            newGroupValue = i18nc("@title:group Size", "Small");
+        } else if (fileSize < 10 * 1024 * 1024) { // < 10 MB
+            newGroupValue = i18nc("@title:group Size", "Medium");
+        } else {
+            newGroupValue = i18nc("@title:group Size", "Big");
+        }
+    }
+    return newGroupValue;
+}
+
+QString KFileItemModel::timeGroupIdentityForDateTime(const QDateTime &fileTime) const
+{
+    // Returns a key that is equal for all items belonging to the same group as
+    // computed by timeRoleGroups(). Keep this in sync with the group labels
+    // generated there.
+    const QDate currentDate = QDate::currentDate();
+    const QDate fileDate = fileTime.date();
+
+    if (fileDate.isValid() && currentDate.year() == fileDate.year() && currentDate.month() == fileDate.month()) {
+        const int daysDistance = fileDate.daysTo(currentDate);
+        switch (daysDistance / 7) {
+        case 0:
+            switch (daysDistance) {
+            case 0:
+                return QStringLiteral("currentMonth/today");
+            case 1:
+                return QStringLiteral("currentMonth/yesterday");
+            default:
+                return QStringLiteral("currentMonth/day/") + fileDate.toString(Qt::ISODate);
+            }
+        case 1:
+            return QStringLiteral("currentMonth/oneWeekAgo");
+        case 2:
+            return QStringLiteral("currentMonth/twoWeeksAgo");
+        case 3:
+            return QStringLiteral("currentMonth/threeWeeksAgo");
+        default:
+            return QStringLiteral("currentMonth/earlier");
+        }
+    }
+
+    const QDate lastMonthDate = currentDate.addMonths(-1);
+    if (fileDate.isValid() && lastMonthDate.year() == fileDate.year() && lastMonthDate.month() == fileDate.month()) {
+        const int daysDistance = fileDate.daysTo(currentDate);
+        if (daysDistance == 1) {
+            return QStringLiteral("lastMonth/yesterday");
+        } else if (daysDistance <= 7) {
+            return QStringLiteral("lastMonth/day/") + fileDate.toString(Qt::ISODate);
+        } else if (daysDistance <= 7 * 2) {
+            return QStringLiteral("lastMonth/oneWeekAgo");
+        } else if (daysDistance <= 7 * 3) {
+            return QStringLiteral("lastMonth/twoWeeksAgo");
+        } else if (daysDistance <= 7 * 4) {
+            return QStringLiteral("lastMonth/threeWeeksAgo");
+        }
+        return QStringLiteral("lastMonth/later");
+    }
+
+    return QStringLiteral("olderMonth/") + fileDate.toString(QStringLiteral("yyyy-MM"));
+}
+
 bool KFileItemModel::lessThan(const ItemData *a, const ItemData *b, const QCollator &collator) const
 {
     int result = 0;
@@ -2397,25 +2557,55 @@ bool KFileItemModel::lessThan(const ItemData *a, const ItemData *b, const QColla
         }
     }
 
-    if (m_sortDirsFirst
-        || (ContentDisplaySettings::directorySizeMode() == ContentDisplaySettings::EnumDirectorySizeMode::ContentCount && m_sortRole == SizeRole)) {
+    const bool dirsFirst = m_sortDirsFirst
+        || (ContentDisplaySettings::directorySizeMode() == ContentDisplaySettings::EnumDirectorySizeMode::ContentCount && m_sortRole == SizeRole);
+
+    if (groupedSorting()) {
+        const QByteArray gRole = groupRole();
+
+        // When items are grouped, "folders first" is applied within each group
+        // instead of moving all folders in front of every group (like Windows
+        // Explorer does). Size grouping is an exception: there folders already
+        // form their own group, so they stay at the very top.
+        const bool foldersHaveOwnGroup = typeForRole(gRole) == SizeRole;
+        const bool dirsFirstWithinGroups = m_sortDirsFirstWithinGroups && !foldersHaveOwnGroup;
+
+        if (dirsFirstWithinGroups) {
+            if (dirsFirst && groupIdentityForItem(a, gRole) == groupIdentityForItem(b, gRole)) {
+                const bool isDirA = a->item.isDir();
+                const bool isDirB = b->item.isDir();
+                if (isDirA && !isDirB) {
+                    return true;
+                } else if (!isDirA && isDirB) {
+                    return false;
+                }
+            }
+        } else if (dirsFirst) {
+            const bool isDirA = a->item.isDir();
+            const bool isDirB = b->item.isDir();
+            if (isDirA && !isDirB) {
+                return true;
+            } else if (!isDirA && isDirB) {
+                return false;
+            }
+        }
+
+        if (!rawGroupRole().isEmpty() && gRole != sortRole()) {
+            const QString groupValueA = groupKeyForItem(a, gRole);
+            const QString groupValueB = groupKeyForItem(b, gRole);
+            const int groupResult = stringCompare(groupValueA, groupValueB, collator);
+            if (groupResult != 0) {
+                // Groups are always in ascending order regardless of the sort order setting.
+                return groupResult < 0;
+            }
+        }
+    } else if (dirsFirst) {
         const bool isDirA = a->item.isDir();
         const bool isDirB = b->item.isDir();
         if (isDirA && !isDirB) {
             return true;
         } else if (!isDirA && isDirB) {
             return false;
-        }
-    }
-
-    if (groupedSorting() && !rawGroupRole().isEmpty() && groupRole() != sortRole()) {
-        const QByteArray gRole = groupRole();
-        const QString groupValueA = groupKeyForItem(a, gRole);
-        const QString groupValueB = groupKeyForItem(b, gRole);
-        const int groupResult = stringCompare(groupValueA, groupValueB, collator);
-        if (groupResult != 0) {
-            // Groups are always in ascending order regardless of the sort order setting.
-            return groupResult < 0;
         }
     }
 
@@ -2666,44 +2856,7 @@ QList<QPair<int, QVariant>> KFileItemModel::nameRoleGroups() const
         }
 
         if (firstChar != newFirstChar) {
-            QString newGroupValue;
-            if (newFirstChar.isLetter()) {
-                if (m_collator.compare(newFirstChar, QChar(QLatin1Char('A'))) >= 0 && m_collator.compare(newFirstChar, QChar(QLatin1Char('Z'))) <= 0) {
-                    // WARNING! Symbols based on latin 'Z' like 'Z' with acute are treated wrong as non Latin and put in a new group.
-
-                    // Try to find a matching group in the range 'A' to 'Z'.
-                    static std::vector<QChar> lettersAtoZ;
-                    lettersAtoZ.reserve('Z' - 'A' + 1);
-                    if (lettersAtoZ.empty()) {
-                        for (char c = 'A'; c <= 'Z'; ++c) {
-                            lettersAtoZ.push_back(QLatin1Char(c));
-                        }
-                    }
-
-                    auto localeAwareLessThan = [this](QChar c1, QChar c2) -> bool {
-                        return m_collator.compare(c1, c2) < 0;
-                    };
-
-                    std::vector<QChar>::iterator it = std::lower_bound(lettersAtoZ.begin(), lettersAtoZ.end(), newFirstChar, localeAwareLessThan);
-                    if (it != lettersAtoZ.end()) {
-                        if (localeAwareLessThan(newFirstChar, *it)) {
-                            // newFirstChar belongs to the group preceding *it.
-                            // Example: for an umlaut 'A' in the German locale, *it would be 'B' now.
-                            --it;
-                        }
-                        newGroupValue = *it;
-                    }
-
-                } else {
-                    // Symbols from non Latin-based scripts
-                    newGroupValue = newFirstChar;
-                }
-            } else if (newFirstChar >= QLatin1Char('0') && newFirstChar <= QLatin1Char('9')) {
-                // Apply group '0 - 9' for any name that starts with a digit
-                newGroupValue = i18nc("@title:group Groups that start with a digit", "0 - 9");
-            } else {
-                newGroupValue = i18nc("@title:group", "Others");
-            }
+            const QString newGroupValue = nameGroupValueForName(name);
 
             if (newGroupValue != groupValue) {
                 groupValue = newGroupValue;
@@ -2729,26 +2882,7 @@ QList<QPair<int, QVariant>> KFileItemModel::sizeRoleGroups() const
             continue;
         }
 
-        const KFileItem &item = m_itemData.at(i)->item;
-        KIO::filesize_t fileSize = !item.isNull() ? item.size() : ~0U;
-        QString newGroupValue;
-        if (!item.isNull() && item.isDir()) {
-            if (ContentDisplaySettings::directorySizeMode() == ContentDisplaySettings::EnumDirectorySizeMode::ContentCount || m_sortDirsFirst) {
-                newGroupValue = i18nc("@title:group Size", "Folders");
-            } else {
-                fileSize = m_itemData.at(i)->values.value("size").toULongLong();
-            }
-        }
-
-        if (newGroupValue.isEmpty()) {
-            if (fileSize < 5 * 1024 * 1024) { // < 5 MB
-                newGroupValue = i18nc("@title:group Size", "Small");
-            } else if (fileSize < 10 * 1024 * 1024) { // < 10 MB
-                newGroupValue = i18nc("@title:group Size", "Medium");
-            } else {
-                newGroupValue = i18nc("@title:group Size", "Big");
-            }
-        }
+        const QString newGroupValue = sizeGroupValueForItem(m_itemData.at(i));
 
         if (newGroupValue != groupValue) {
             groupValue = newGroupValue;

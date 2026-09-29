@@ -613,6 +613,18 @@ bool DolphinView::sortFoldersFirst() const
     return m_model->sortDirectoriesFirst();
 }
 
+void DolphinView::setFoldersFirstWithinGroups(bool foldersFirstWithinGroups)
+{
+    if (foldersFirstWithinGroups != m_model->sortDirectoriesFirstWithinGroups()) {
+        updateFoldersFirstWithinGroups(foldersFirstWithinGroups);
+    }
+}
+
+bool DolphinView::foldersFirstWithinGroups() const
+{
+    return m_model->sortDirectoriesFirstWithinGroups();
+}
+
 void DolphinView::setSortHiddenLast(bool hiddenLast)
 {
     if (sortHiddenLast() != hiddenLast) {
@@ -1701,6 +1713,18 @@ void DolphinView::updateSortFoldersFirst(bool foldersFirst)
     Q_EMIT viewSettingsChanged(props.isDefaults());
 }
 
+void DolphinView::updateFoldersFirstWithinGroups(bool foldersFirstWithinGroups)
+{
+    ViewProperties props(viewPropertiesUrl());
+    props.setFoldersFirstWithinGroups(foldersFirstWithinGroups);
+
+    m_model->setSortDirectoriesFirstWithinGroups(foldersFirstWithinGroups);
+
+    Q_EMIT foldersFirstWithinGroupsChanged(foldersFirstWithinGroups);
+
+    Q_EMIT viewSettingsChanged(props.isDefaults());
+}
+
 void DolphinView::updateSortHiddenLast(bool hiddenLast)
 {
     ViewProperties props(viewPropertiesUrl());
@@ -2466,6 +2490,12 @@ void DolphinView::applyViewProperties(const ViewProperties &props)
     if (sortFoldersFirst != m_model->sortDirectoriesFirst()) {
         m_model->setSortDirectoriesFirst(sortFoldersFirst);
         Q_EMIT sortFoldersFirstChanged(sortFoldersFirst);
+    }
+
+    const bool foldersFirstWithinGroups = props.foldersFirstWithinGroups();
+    if (foldersFirstWithinGroups != m_model->sortDirectoriesFirstWithinGroups()) {
+        m_model->setSortDirectoriesFirstWithinGroups(foldersFirstWithinGroups);
+        Q_EMIT foldersFirstWithinGroupsChanged(foldersFirstWithinGroups);
     }
 
     const bool sortHiddenLast = props.sortHiddenLast();

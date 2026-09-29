@@ -45,7 +45,7 @@ private Q_SLOTS:
     void slotSortingChanged(int index);
     void slotSortOrderChanged(int index);
     void slotGroupedSortingChanged();
-    void slotSortFoldersFirstChanged();
+    void slotFoldersFirstModeChanged();
     void slotSortHiddenLastChanged();
     void slotShowPreviewChanged();
     void slotShowHiddenFilesChanged();
@@ -67,7 +67,7 @@ private:
     QComboBox *m_viewMode;
     QComboBox *m_sortOrder;
     QComboBox *m_sorting;
-    QCheckBox *m_sortFoldersFirst;
+    QComboBox *m_foldersFirstMode;
     QCheckBox *m_sortHiddenLast;
     QCheckBox *m_previewsShown;
     QCheckBox *m_showInGroups;

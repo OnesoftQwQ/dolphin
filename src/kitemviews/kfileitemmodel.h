@@ -88,6 +88,14 @@ public:
     bool sortDirectoriesFirst() const;
 
     /**
+     * If enabled, folders are placed at the top of each group instead of in
+     * front of all groups when grouped sorting is active. Only has an effect
+     * if setSortDirectoriesFirst() is enabled.
+     */
+    void setSortDirectoriesFirstWithinGroups(bool dirsFirstWithinGroups);
+    bool sortDirectoriesFirstWithinGroups() const;
+
+    /**
      * Sets a separate sorting with hidden files and folders last (true) or not (false).
      */
     void setSortHiddenLast(bool hiddenLast);
@@ -451,6 +459,14 @@ private:
     QString groupKeyForItem(const ItemData *item, const QByteArray &role) const;
 
     /**
+     * @return A key that identifies the group \a item belongs to, matching the
+     *         groups computed by the xxxRoleGroups() methods. Unlike
+     *         groupKeyForItem() this is used to detect whether two items share
+     *         the same group (it is not required to be orderable).
+     */
+    QString groupIdentityForItem(const ItemData *item, const QByteArray &role) const;
+
+    /**
      * Sorts the items between \a begin and \a end using the comparison
      * function lessThan().
      */
@@ -471,6 +487,24 @@ private:
     QList<QPair<int, QVariant>> permissionRoleGroups() const;
     QList<QPair<int, QVariant>> ratingRoleGroups() const;
     QList<QPair<int, QVariant>> genericStringRoleGroups(const QByteArray &typeForRole) const;
+
+    /**
+     * Helper method that returns the group value used by nameRoleGroups() for
+     * the given item name.
+     */
+    QString nameGroupValueForName(const QString &name) const;
+
+    /**
+     * Helper method that returns the group value used by sizeRoleGroups() for
+     * the given item.
+     */
+    QString sizeGroupValueForItem(const ItemData *item) const;
+
+    /**
+     * Helper method that returns a key identifying the group used by
+     * timeRoleGroups() for the given date/time.
+     */
+    QString timeGroupIdentityForDateTime(const QDateTime &fileTime) const;
 
     /**
      * Helper method for all xxxRoleGroups() methods to check whether the
@@ -557,6 +591,7 @@ private:
     QCollator m_collator;
     bool m_naturalSorting;
     bool m_sortDirsFirst;
+    bool m_sortDirsFirstWithinGroups;
     bool m_sortHiddenLast;
 
     RoleType m_sortRole;

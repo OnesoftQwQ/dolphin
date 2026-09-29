@@ -43,7 +43,7 @@ ViewPropertiesDialog::ViewPropertiesDialog(DolphinView *dolphinView)
     , m_viewMode(nullptr)
     , m_sortOrder(nullptr)
     , m_sorting(nullptr)
-    , m_sortFoldersFirst(nullptr)
+    , m_foldersFirstMode(nullptr)
     , m_sortHiddenLast(nullptr)
     , m_previewsShown(nullptr)
     , m_showInGroups(nullptr)
@@ -82,7 +82,11 @@ ViewPropertiesDialog::ViewPropertiesDialog(DolphinView *dolphinView)
         m_sorting->addItem(info.translation, info.role);
     }
 
-    m_sortFoldersFirst = new QCheckBox(i18nc("@option:check", "Show folders first"));
+    m_foldersFirstMode = new QComboBox();
+    m_foldersFirstMode->addItem(i18nc("@item:inlistbox Folders first", "Do not show folders first"), 0);
+    m_foldersFirstMode->addItem(i18nc("@item:inlistbox Folders first", "Show folders first"), 1);
+    m_foldersFirstMode->addItem(i18nc("@item:inlistbox Folders first", "Show folders first within each group"), 2);
+
     m_sortHiddenLast = new QCheckBox(i18nc("@option:check", "Show hidden files last"));
     m_previewsShown = new QCheckBox(i18nc("@option:check", "Show preview"));
     m_showInGroups = new QCheckBox(i18nc("@option:check", "Show in groups"));
@@ -143,7 +147,7 @@ ViewPropertiesDialog::ViewPropertiesDialog(DolphinView *dolphinView)
 
     layout->addItem(new QSpacerItem(0, Dolphin::VERTICAL_SPACER_HEIGHT, QSizePolicy::Fixed, QSizePolicy::Fixed));
 
-    layout->addRow(i18n("View options:"), m_sortFoldersFirst);
+    layout->addRow(i18n("View options:"), m_foldersFirstMode);
     layout->addRow(QString(), m_previewsShown);
     layout->addRow(QString(), m_showInGroups);
     layout->addRow(QString(), m_showHiddenFiles);
@@ -152,7 +156,7 @@ ViewPropertiesDialog::ViewPropertiesDialog(DolphinView *dolphinView)
     connect(m_viewMode, &QComboBox::currentIndexChanged, this, &ViewPropertiesDialog::slotViewModeChanged);
     connect(m_sorting, &QComboBox::currentIndexChanged, this, &ViewPropertiesDialog::slotSortingChanged);
     connect(m_sortOrder, &QComboBox::currentIndexChanged, this, &ViewPropertiesDialog::slotSortOrderChanged);
-    connect(m_sortFoldersFirst, &QCheckBox::clicked, this, &ViewPropertiesDialog::slotSortFoldersFirstChanged);
+    connect(m_foldersFirstMode, &QComboBox::currentIndexChanged, this, &ViewPropertiesDialog::slotFoldersFirstModeChanged);
     connect(m_sortHiddenLast, &QCheckBox::clicked, this, &ViewPropertiesDialog::slotSortHiddenLastChanged);
     connect(m_previewsShown, &QCheckBox::clicked, this, &ViewPropertiesDialog::slotShowPreviewChanged);
     connect(m_showInGroups, &QCheckBox::clicked, this, &ViewPropertiesDialog::slotGroupedSortingChanged);
@@ -261,10 +265,12 @@ void ViewPropertiesDialog::slotGroupedSortingChanged()
     markAsDirty(true);
 }
 
-void ViewPropertiesDialog::slotSortFoldersFirstChanged()
+void ViewPropertiesDialog::slotFoldersFirstModeChanged()
 {
-    const bool foldersFirst = m_sortFoldersFirst->isChecked();
+    const int mode = m_foldersFirstMode->currentData().toInt();
+    const bool foldersFirst = (mode != 0);
     m_viewProps->setSortFoldersFirst(foldersFirst);
+    m_viewProps->setFoldersFirstWithinGroups(foldersFirst && mode == 2);
     markAsDirty(true);
 }
 
@@ -374,6 +380,7 @@ void ViewPropertiesDialog::applyViewProperties()
     m_dolphinView->setSortRole(m_viewProps->sortRole());
     m_dolphinView->setSortOrder(m_viewProps->sortOrder());
     m_dolphinView->setSortFoldersFirst(m_viewProps->sortFoldersFirst());
+    m_dolphinView->setFoldersFirstWithinGroups(m_viewProps->foldersFirstWithinGroups());
     m_dolphinView->setSortHiddenLast(m_viewProps->sortHiddenLast());
     m_dolphinView->setGroupedSorting(m_viewProps->groupedSorting());
     m_dolphinView->setVisibleRoles(m_viewProps->visibleRoles());
@@ -416,7 +423,11 @@ void ViewPropertiesDialog::loadSettings()
     }
     m_sorting->setCurrentIndex(sortRoleIndex);
 
-    m_sortFoldersFirst->setChecked(m_viewProps->sortFoldersFirst());
+    int foldersFirstIndex = 0;
+    if (m_viewProps->sortFoldersFirst()) {
+        foldersFirstIndex = m_viewProps->foldersFirstWithinGroups() ? 2 : 1;
+    }
+    m_foldersFirstMode->setCurrentIndex(foldersFirstIndex);
     m_sortHiddenLast->setChecked(m_viewProps->sortHiddenLast());
 
     // Load show preview, show in groups and show hidden files settings

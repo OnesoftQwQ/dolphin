@@ -6843,3 +6843,83 @@ msgstr "缩放"
 msgctxt "@action:intoolbar"
 msgid "Zoom"
 msgstr "缩放"
+
+#: views/dolphinviewactionhandler.cpp
+#, kde-format
+msgctxt "@action:inmenu Sort"
+msgid "Enabled"
+msgstr "启用"
+
+#: views/dolphinviewactionhandler.cpp
+#, kde-format
+msgctxt "@action:inmenu Sort"
+msgid "Within Groups"
+msgstr "组内文件夹靠前"
+
+#: settings/viewpropertiesdialog.cpp
+#, kde-format
+msgctxt "@option:check"
+msgid "Show folders first within each group"
+msgstr "每个分组内文件夹靠前显示"
+
+#. i18n: ectx: label, entry (FoldersFirstWithinGroups), group (Dolphin)
+#: settings/dolphin_directoryviewpropertysettings.kcfg:74
+#, kde-format
+msgctxt "@label"
+msgid "Show folders first within each group when grouped sorting is enabled"
+msgstr "分组显示时，每个分组内的文件夹靠前显示"
+
+#. i18n: ectx: whatsthis, entry (FoldersFirstWithinGroups), group (Dolphin)
+#: settings/dolphin_directoryviewpropertysettings.kcfg:75
+#, kde-format
+msgctxt "@info:whatsthis"
+msgid "When grouped sorting is enabled and folders are shown first, the folders are placed at the top of every group instead of in front of all groups."
+msgstr "当启用分组且文件夹靠前显示时，文件夹会显示在每个分组的顶部，而不是显示在所有分组之前。"
+
+#: views/dolphinviewactionhandler.cpp
+#, kde-format
+msgctxt "@action:inmenu Sort"
+msgid "Disabled"
+msgstr "禁用"
+
+#: views/dolphinviewactionhandler.cpp
+#, kde-format
+msgctxt "@action:inmenu Sort"
+msgid "Show Folders First"
+msgstr "文件夹靠前显示"
+
+#: views/dolphinviewactionhandler.cpp
+#, kde-format
+msgctxt "@action:inmenu Sort"
+msgid "Show Folders First Within Groups"
+msgstr "分组内文件夹靠前显示"
+
+#: settings/viewpropertiesdialog.cpp
+#, kde-format
+msgctxt "@item:inlistbox Folders first"
+msgid "Disabled"
+msgstr "禁用"
+
+#: settings/viewpropertiesdialog.cpp
+#, kde-format
+msgctxt "@item:inlistbox Folders first"
+msgid "Show folders first"
+msgstr "文件夹靠前显示"
+
+#: settings/viewpropertiesdialog.cpp
+#, kde-format
+msgctxt "@item:inlistbox Folders first"
+msgid "Show folders first within each group"
+msgstr "每个分组内文件夹靠前显示"
+
+#: views/dolphinviewactionhandler.cpp
+#, kde-format
+msgctxt "@action:inmenu Sort"
+msgid "Do Not Show Folders First"
+msgstr "不优先显示文件夹"
+
+#: settings/viewpropertiesdialog.cpp
+#, kde-format
+msgctxt "@item:inlistbox Folders first"
+msgid "Do not show folders first"
+msgstr "不优先显示文件夹"

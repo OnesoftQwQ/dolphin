@@ -143,6 +143,7 @@ bool ViewProperties::isDefaults() const
         && m_node->sortRole() == defaultProps->sortRole()
         && m_node->sortOrder() == defaultProps->sortOrder()
         && m_node->sortFoldersFirst() == defaultProps->sortFoldersFirst()
+        && m_node->foldersFirstWithinGroups() == defaultProps->foldersFirstWithinGroups()
         && m_node->sortHiddenLast() == defaultProps->sortHiddenLast()
         && m_node->visibleRoles() == defaultProps->visibleRoles()
         && m_node->headerColumnWidths() == defaultProps->headerColumnWidths();
@@ -434,6 +435,19 @@ bool ViewProperties::sortFoldersFirst() const
     return m_node->sortFoldersFirst();
 }
 
+void ViewProperties::setFoldersFirstWithinGroups(bool foldersFirstWithinGroups)
+{
+    if (m_node->foldersFirstWithinGroups() != foldersFirstWithinGroups) {
+        m_node->setFoldersFirstWithinGroups(foldersFirstWithinGroups);
+        update();
+    }
+}
+
+bool ViewProperties::foldersFirstWithinGroups() const
+{
+    return m_node->foldersFirstWithinGroups();
+}
+
 void ViewProperties::setSortHiddenLast(bool hiddenLast)
 {
     if (m_node->sortHiddenLast() != hiddenLast) {
@@ -568,6 +582,7 @@ void ViewProperties::setDirProperties(const ViewProperties &props)
     setGroupRole(props.groupRole());
     setSortOrder(props.sortOrder());
     setSortFoldersFirst(props.sortFoldersFirst());
+    setFoldersFirstWithinGroups(props.foldersFirstWithinGroups());
     setSortHiddenLast(props.sortHiddenLast());
     setVisibleRoles(props.visibleRoles());
     setHeaderColumnWidths(props.headerColumnWidths());

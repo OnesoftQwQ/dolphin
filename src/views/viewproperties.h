@@ -69,6 +69,9 @@ public:
     void setSortFoldersFirst(bool foldersFirst);
     bool sortFoldersFirst() const;
 
+    void setFoldersFirstWithinGroups(bool foldersFirstWithinGroups);
+    bool foldersFirstWithinGroups() const;
+
     void setSortHiddenLast(bool hiddenLast);
     bool sortHiddenLast() const;
 

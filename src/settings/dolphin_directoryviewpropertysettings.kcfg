@@ -69,6 +69,12 @@
             <default>true</default>
         </entry>
 
+        <entry name="FoldersFirstWithinGroups" type="Bool" >
+            <label context="@label">Show folders first within each group when grouped sorting is enabled</label>
+            <whatsthis context="@info:whatsthis">When grouped sorting is enabled and folders are shown first, the folders are placed at the top of every group instead of in front of all groups.</whatsthis>
+            <default>true</default>
+        </entry>
+
         <entry name="SortHiddenLast" type="Bool" >
             <label context="@label">Show hidden files and folders last</label>
             <default>false</default>

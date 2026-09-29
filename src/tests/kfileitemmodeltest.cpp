@@ -67,6 +67,7 @@ private Q_SLOTS:
     void testMakeExpandedItemHidden();
     void testRemoveFilteredExpandedItems();
     void testSorting();
+    void testFoldersFirstWithinGroups();
     void testNaturalSorting();
     void testStringCompare_data();
     void testStringCompare();
@@ -1289,6 +1290,41 @@ void KFileItemModelTest::testSorting()
     QCOMPARE(itemsMovedSpy.count(), 1);
     QCOMPARE(itemsMovedSpy.first().at(0).value<KItemRange>(), KItemRange(0, 10));
     QCOMPARE(itemsMovedSpy.takeFirst().at(1).value<QList<int>>(), QList<int>() << 2 << 4 << 5 << 3 << 0 << 1 << 6 << 7 << 9 << 8);
+}
+
+void KFileItemModelTest::testFoldersFirstWithinGroups()
+{
+    QSignalSpy itemsInsertedSpy(m_model, &KFileItemModel::itemsInserted);
+    QSignalSpy itemsMovedSpy(m_model, &KFileItemModel::itemsMoved);
+    QVERIFY(itemsInsertedSpy.isValid());
+    QVERIFY(itemsMovedSpy.isValid());
+
+    const QDateTime now = QDateTime::currentDateTime();
+    m_testDir->createFile("a", QByteArrayLiteral("file a"), now);
+    m_testDir->createFile("b", QByteArrayLiteral("file b"), now);
+    m_testDir->createFile("c", QByteArrayLiteral("file c"), now.addDays(-1));
+    m_testDir->createDir("z", now);
+
+    m_model->setGroupedSorting(true);
+    m_model->setSortRole("modificationtime");
+    m_model->setSortOrder(Qt::AscendingOrder);
+    m_model->setSortDirectoriesFirst(true);
+    QVERIFY(m_model->sortDirectoriesFirstWithinGroups());
+
+    m_model->loadDirectory(m_testDir->url());
+    QVERIFY(itemsInsertedSpy.wait());
+    QCOMPARE(itemsInsertedSpy.count(), 1);
+    itemsInsertedSpy.takeFirst();
+
+    // "Folders first" is applied within each group: the folder "z" is shown at
+    // the top of the "Today" group instead of in front of all groups.
+    QCOMPARE(itemsInModel(), QStringList() << "c" << "z" << "a" << "b");
+
+    // With the option disabled, the previous behavior is restored: all folders
+    // are shown in front of all groups.
+    m_model->setSortDirectoriesFirstWithinGroups(false);
+    QCOMPARE(itemsMovedSpy.count(), 1);
+    QCOMPARE(itemsInModel(), QStringList() << "z" << "c" << "a" << "b");
 }
 
 void KFileItemModelTest::testNaturalSorting()

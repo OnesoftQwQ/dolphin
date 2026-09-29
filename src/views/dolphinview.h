@@ -233,6 +233,13 @@ public:
     void setSortFoldersFirst(bool foldersFirst);
     bool sortFoldersFirst() const;
 
+    /**
+     * If enabled, folders are shown at the top of each group instead of in
+     * front of all groups when grouped sorting is active.
+     */
+    void setFoldersFirstWithinGroups(bool foldersFirstWithinGroups);
+    bool foldersFirstWithinGroups() const;
+
     /** Sets a separate sorting with hidden files and folders last (true) or not (false). */
     void setSortHiddenLast(bool hiddenLast);
     bool sortHiddenLast() const;
@@ -605,6 +612,11 @@ Q_SIGNALS:
     void sortFoldersFirstChanged(bool foldersFirst);
 
     /**
+     * Is emitted if the "folders first within groups" setting has been changed.
+     */
+    void foldersFirstWithinGroupsChanged(bool foldersFirstWithinGroups);
+
+    /**
      * Is emitted if the sorting of hidden files has been changed.
      */
     void sortHiddenLastChanged(bool hiddenLast);
@@ -832,6 +844,8 @@ private Q_SLOTS:
      * sorting of files and folders (separate with folders first or mixed) given by \a foldersFirst.
      */
     void updateSortFoldersFirst(bool foldersFirst);
+
+    void updateFoldersFirstWithinGroups(bool foldersFirstWithinGroups);
 
     /**
      * Cache out zoom mode changes to prevent constant Settings requests

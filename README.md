@@ -1,3 +1,95 @@
+# Dolphin — fork with "folders first within groups"
+
+> This is a personal fork of [KDE/dolphin](https://github.com/KDE/dolphin), based on the
+> `release/26.08` branch (Dolphin **26.08.1**). It is **not** affiliated with KDE.
+> The upstream README is kept below.
+
+## What this fork changes
+
+Upstream Dolphin has a *Folders First* option and a *Show in Groups* option. When both are
+enabled, Dolphin moves **all** folders in front of **all** groups: the list looks like
+"all folders grouped by category" followed by "all files grouped by category".
+
+This fork makes *Folders First* apply **inside each group** instead, so every group shows its
+own folders first and then its files — the same behavior as Windows Explorer:
+
+```
+Upstream (grouped by Modified):        This fork (grouped by Modified):
+  ▼ Folders                              ▼ Today
+      Documents        Today                 Documents      (folder)
+      Downloads        Yesterday             report.pdf     (file)
+  ▼ Today                                    photo.png      (file)
+      report.pdf                             ...
+      photo.png                            ▼ Yesterday
+  ▼ Yesterday                                Backup         (folder)
+      ...                                    notes.txt      (file)
+```
+
+### The setting
+
+A new per-view setting `FoldersFirstWithinGroups` (default **on**) is added. The
+*Folders First* menu entry (`View → Sort by → Folders First`) became a submenu with three
+mutually exclusive states:
+
+| Menu item | `SortFoldersFirst` | `FoldersFirstWithinGroups` | Result |
+|---|---|---|---|
+| Do not show folders first | `false` | – | folders and files are mixed |
+| Show folders first | `true` | `false` | legacy behavior: folders in front of *all* groups |
+| Show folders first within each group **(default)** | `true` | `true` | folders first inside *each* group |
+
+The same choice is available in `View → Adjust View Display Style` (a combo box).
+
+### Implementation
+
+* `src/kitemviews/kfileitemmodel.cpp`
+  * `lessThan()` now treats the group as the primary sort criterion and applies
+    "folders first" only when both items belong to the same group
+    (this is what removes the need to move every folder in front of every group).
+  * Added `groupIdentityForItem()` and small helpers (`nameGroupValueForName()`,
+    `sizeGroupValueForItem()`, `timeGroupIdentityForDateTime()`) so the comparison uses the
+    exact same group boundaries as `nameRoleGroups()`, `sizeRoleGroups()` and
+    `timeRoleGroups()`. Size grouping is kept as-is (folders already form their own group).
+  * The helpers were extracted from the existing group functions so there is a single source
+    of truth.
+* `src/settings/dolphin_directoryviewpropertysettings.kcfg` — new boolean
+  `FoldersFirstWithinGroups` (default `true`).
+* `src/views/viewproperties.{h,cpp}`, `src/views/dolphinview.{h,cpp}`,
+  `src/views/dolphinviewactionhandler.{h,cpp}`,
+  `src/settings/viewpropertiesdialog.{h,cpp}` — plumbing, the new submenu and the dialog
+  combo box.
+* `src/tests/kfileitemmodeltest.cpp` — `testFoldersFirstWithinGroups()` verifies the group
+  ordering and the fallback to the legacy behavior.
+* `po/zh_CN/dolphin.po` — Simplified Chinese translations for the new strings.
+
+### Building
+
+```sh
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+cmake --build build -j"$(nproc)"
+DESTDIR=/tmp/stage cmake --install build
+```
+
+### Fedora Kinoite / rpm-ostree
+
+Prebuilt RPMs (`dolphin` + `dolphin-libs`, built against Fedora 44 / Qt 6.11.2 / KF6 6.30.0)
+are attached to the **Releases** of this repository.
+
+```sh
+sudo rpm-ostree override replace ./dolphin-*.rpm ./dolphin-libs-*.rpm
+systemctl reboot
+```
+
+Revert to the official build:
+
+```sh
+sudo rpm-ostree override reset dolphin dolphin-libs
+systemctl reboot
+```
+
+---
+
+*The rest of this file is the upstream Dolphin README.*
+
 # Dolphin
 
 Dolphin is KDE's file manager that lets you navigate and browse the contents of your hard drives, USB sticks, SD cards, and more. Creating, moving, or deleting files and folders is simple and fast. See more information [on Dolphin's homepage](https://apps.kde.org/dolphin/).
